@@ -1,7 +1,7 @@
 Canvas Mine
 =========
 
-Repository with good stuff made by MobiTouch's group.
+Repository with Minesweeper game developed with HTML5 and Canvas
 
 ##Author
-Chiquitto<chiquitto@chiquitto.com.br>
+Chiquitto <chiquitto@chiquitto.com.br>
