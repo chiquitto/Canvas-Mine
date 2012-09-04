@@ -5,7 +5,7 @@
 // cm -> canvasmine
 
 $(document).ready(function(){
-	cm.init(9,9,80);
+	cm.init(9,9,10);
 });
 
 var cm = {
@@ -94,6 +94,12 @@ var cm = {
 		};
 	},
 	
+	cellClicked: function(clickEvent) {
+		var celln = cm.click2Cell(clickEvent);
+		cm.openCell(celln);
+		console.log('Click in ', celln);
+	},
+	
 	cellXY2Celln: function(cellx, celly) {
 		return (cm.w * celly) + cellx;
 	},
@@ -124,15 +130,8 @@ var cm = {
 		cm.d2.drawImage(cm.img[0], map.x, map.y, map.w, map.h, cm.cell2PosX(celln), cm.cell2PosY(celln), map.w, map.h);
 	},
 	
-	/**
-	 * Find the near mines
-	 */
-	findNearMines: function(celln) {
-		if(typeof cm.minesNear[celln] == 'number') {
-			return cm.minesNear[celln];
-		}
-		
-		console.log(typeof cm.minesNear[celln]);
+	findAroundCells: function(celln) {
+		var r = [];
 		
 		var cellx = cm.cell2CellX(celln);
 		var findx = [];
@@ -154,22 +153,34 @@ var cm = {
 			findy.push(celly + 1);
 		}
 		
-		cm.minesNear[celln] = 0;
 		var ixmax = findx.length;
 		var iymax = findy.length;
 		for(var iy=0; iy < iymax; iy++) {
 			for(var ix=0; ix < ixmax; ix++) {
-				var celln2 = cm.cellXY2Celln(findx[ix], findy[iy]);
-				if(celln == celln2) {
-					continue;
-				}
-				console.log('findNearMines', celln2)
-				if($.inArray(celln2, cm.minespos) > -1) {
-					cm.minesNear[celln]++;
+				if((cellx != ix) || (celly != iy)) {
+					r.push(cm.cellXY2Celln(findx[ix], findy[iy]));
 				}
 			}
 		}
+		return r;
+	},
+	
+	/**
+	 * Find the near mines
+	 */
+	findNearMines: function(celln) {
+		if(typeof cm.minesNear[celln] == 'number') {
+			return cm.minesNear[celln];
+		}
 		
+		var aroundCells = cm.findAroundCells(celln);
+		var aroundCellsLength = aroundCells.length;
+		cm.minesNear[celln] = 0;
+		for(var i1 = 0; i1 < aroundCellsLength; i1++) {
+			if($.inArray(aroundCells[i1], cm.minespos) > -1) {
+				cm.minesNear[celln]++;
+			}
+		}
 		return cm.minesNear[celln];
 	},
 	
@@ -181,6 +192,8 @@ var cm = {
 			return false;
 		}
 		
+		console.log('Open the cell ', celln);
+		
 		if($.inArray(celln, cm.minespos) > -1) {
 			console.log('LOST THE GAME');
 			cm.cell[celln] = cm.CELL_MINE;
@@ -188,11 +201,22 @@ var cm = {
 		}
 		else {
 			var nearMines = cm.findNearMines(celln);
-			console.log('openCell', nearMines);
 			cm.cell[celln] = nearMines + 1010;
+			
+			if(nearMines == 0) {
+				cm.openCellAround(celln);
+			}
 		}
 		
 		cm.drawCell(celln);
+	},
+	
+	openCellAround: function(celln) {
+		var aroundCells = cm.findAroundCells(celln);
+		var aroundCellsLength = aroundCells.length;
+		for(var i1 = 0; i1 < aroundCellsLength; i1++) {
+			cm.openCell(aroundCells[i1]);
+		}
 	},
 	
 	prepareGame: function() {
@@ -222,7 +246,6 @@ var cm = {
 			h:25
 		};
 		
-		console.log('spriteMap', type);
 		switch(type) {
 			case cm.CELL_CLOSED:
 				map.y = 25;
@@ -252,7 +275,6 @@ var cm = {
 	 */
 	start: function(e) {
 		console.log('Start the game');
-		cm.c.unbind('click');
 		
 		var celln = cm.click2Cell(e);
 		
@@ -276,6 +298,8 @@ var cm = {
 		} while (minesIn <= cm.minescount);
 		
 		cm.openCell(celln);
+		
+		cm.c.unbind('click').click(cm.cellClicked);
 	}
 }
 
