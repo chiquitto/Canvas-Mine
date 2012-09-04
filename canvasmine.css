@@ -1,0 +1,19 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+
+#formGame fieldset {
+	font: 12px Verdana, Arial, Helvetica, sans-serif;
+	margin: 50px auto;
+	width: 300px;
+}
+#startNewGame {
+	display: block;
+	margin: auto;
+}
+#canvasmine {
+	/*border:1px solid #0066FF;*/
+	display: block;
+	margin: 0 auto;
+}
