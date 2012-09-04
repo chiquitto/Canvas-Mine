@@ -5,13 +5,15 @@
 // cm -> canvasmine
 
 $(document).ready(function(){
-	cm.init(9,9,10);
+	cm.init(9,9,5);
 });
 
 var cm = {
 	// const
 	CELL_CLOSED:1001, // cell closed
-	CELL_MINE:1002, // cell with mine
+	CELL_FLAG:1002, // cell with flag
+	CELL_QUESTION:1003, // is a mine?
+	CELL_MINE:1009, // cell with mine
 	CELL_0_MINES_NEAR:1010, // cell with 0 mines near
 	CELL_1_MINES_NEAR:1011, // cell with 1 mines near
 	CELL_2_MINES_NEAR:1012, // cell with 2 mines near
@@ -24,11 +26,12 @@ var cm = {
 	
 	c:null, // the canvas element
 	cOffset:null,
-	d2:null,
 	cell:[],
 	cellCount:0,
+	d2:null,
 	s:25, // size in px
 	img:['./img/sprite.jpg'],
+	flags:0,
 	
 	// mines config
 	minescount:0,
@@ -94,14 +97,42 @@ var cm = {
 		};
 	},
 	
-	cellClicked: function(clickEvent) {
+	cellLeftClicked: function(clickEvent) {
 		var celln = cm.click2Cell(clickEvent);
-		cm.openCell(celln);
-		console.log('Click in ', celln);
+		if(cm.openCell(celln)) {
+			cm.checkFinish();
+		}
+		return false;
+	},
+	
+	cellRightClicked: function(clickEvent) {
+		var celln = cm.click2Cell(clickEvent);
+		if(cm.openCellOption(celln)) {
+			cm.checkFinish();
+		}
+		return false;
 	},
 	
 	cellXY2Celln: function(cellx, celly) {
 		return (cm.w * celly) + cellx;
+	},
+	
+	/**
+	 * Checks whether the player has won
+	 */
+	checkFinish: function() {
+		if(cm.flags == cm.minescount) {
+			var finish = true;
+			for(var i1 = 0; i1 < cm.minescount; i1++) {
+				if( cm.cell[cm.minespos[i1]] != cm.CELL_FLAG ) {
+					finish = false;
+					break;
+				}
+			}
+			if(finish) {
+				cm.win();
+			}
+		}
 	},
 	
 	/**
@@ -118,6 +149,10 @@ var cm = {
 		for(var i1=0; i1<cm.cellCount; i1++) {
 			cm.drawCell(i1);
 		}
+	},
+	
+	defeated: function() {
+		alert("Game over. You've been defeated!");
 	},
 	
 	/**
@@ -195,20 +230,20 @@ var cm = {
 		console.log('Open the cell ', celln);
 		
 		if($.inArray(celln, cm.minespos) > -1) {
-			console.log('LOST THE GAME');
 			cm.cell[celln] = cm.CELL_MINE;
-			// TODO
+			cm.drawCell(celln);
+			cm.defeated();
+			return false;
 		}
-		else {
-			var nearMines = cm.findNearMines(celln);
-			cm.cell[celln] = nearMines + 1010;
-			
-			if(nearMines == 0) {
-				cm.openCellAround(celln);
-			}
+
+		var nearMines = cm.findNearMines(celln);
+		cm.cell[celln] = nearMines + 1010;
+
+		if(nearMines == 0) {
+			cm.openCellAround(celln);
 		}
-		
 		cm.drawCell(celln);
+		return true;
 	},
 	
 	openCellAround: function(celln) {
@@ -217,6 +252,26 @@ var cm = {
 		for(var i1 = 0; i1 < aroundCellsLength; i1++) {
 			cm.openCell(aroundCells[i1]);
 		}
+	},
+	
+	openCellOption: function(celln) {
+		switch(cm.cell[celln]) {
+			case cm.CELL_CLOSED:
+				cm.cell[celln] = cm.CELL_FLAG;
+				cm.flags++;
+				break;
+			case cm.CELL_FLAG:
+				cm.cell[celln] = cm.CELL_QUESTION;
+				cm.flags--;
+				break;
+			case cm.CELL_QUESTION:
+				cm.cell[celln] = cm.CELL_CLOSED;
+				break;
+			default:
+				return false;
+		}
+		cm.drawCell(celln);
+		return true;
 	},
 	
 	prepareGame: function() {
@@ -250,6 +305,14 @@ var cm = {
 			case cm.CELL_CLOSED:
 				map.y = 25;
 				break;
+			case cm.CELL_FLAG:
+				map.x = 25;
+				map.y = 25;
+				break;
+			case cm.CELL_QUESTION:
+				map.x = 50;
+				map.y = 25;
+				break;
 			case cm.CELL_MINE:
 				map.x = 75;
 				map.y = 25;
@@ -279,7 +342,7 @@ var cm = {
 		var celln = cm.click2Cell(e);
 		
 		// rand mines
-		var minesIn = 0;
+		var minesIn = 1;
 		var r;
 		do {
 			r = rand(0, cm.cellCount);
@@ -299,7 +362,14 @@ var cm = {
 		
 		cm.openCell(celln);
 		
-		cm.c.unbind('click').click(cm.cellClicked);
+		cm.c.unbind('click')
+			.click(cm.cellLeftClicked)
+			.bind('contextmenu', cm.cellRightClicked)
+		;
+	},
+	
+	win: function() {
+		alert('Game over. You win!');
 	}
 }
 
